@@ -65,7 +65,7 @@ export type LiarsBarDapp = {
       "args": [
         {
           "name": "tableId",
-          "type": "u64"
+          "type": "u128"
         }
       ]
     },
@@ -148,94 +148,11 @@ export type LiarsBarDapp = {
       "args": [
         {
           "name": "tableId",
-          "type": "u64"
+          "type": "u128"
         },
         {
           "name": "characterId",
           "type": "string"
-        }
-      ]
-    },
-    {
-      "name": "quitTable",
-      "discriminator": [
-        72,
-        118,
-        106,
-        80,
-        28,
-        10,
-        132,
-        188
-      ],
-      "accounts": [
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "table",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  97,
-                  98,
-                  108,
-                  101
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "tableId"
-              }
-            ]
-          }
-        },
-        {
-          "name": "players",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  112,
-                  108,
-                  97,
-                  121,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "tableId"
-              },
-              {
-                "kind": "account",
-                "path": "signer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "incoLightningProgram",
-          "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
-        }
-      ],
-      "args": [
-        {
-          "name": "tableId",
-          "type": "u64"
         }
       ]
     },
@@ -318,11 +235,94 @@ export type LiarsBarDapp = {
       "args": [
         {
           "name": "tableId",
-          "type": "u64"
+          "type": "u128"
         },
         {
           "name": "pickedIndexs",
           "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "quitTable",
+      "discriminator": [
+        72,
+        118,
+        106,
+        80,
+        28,
+        10,
+        132,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "table",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  97,
+                  98,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "tableId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "players",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "tableId"
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "incoLightningProgram",
+          "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
+        }
+      ],
+      "args": [
+        {
+          "name": "tableId",
+          "type": "u128"
         }
       ]
     },
@@ -405,7 +405,7 @@ export type LiarsBarDapp = {
       "args": [
         {
           "name": "tableId",
-          "type": "u64"
+          "type": "u128"
         }
       ]
     },
@@ -488,7 +488,7 @@ export type LiarsBarDapp = {
       "args": [
         {
           "name": "tableId",
-          "type": "u64"
+          "type": "u128"
         }
       ]
     }
@@ -699,7 +699,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "player",
@@ -715,7 +715,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "player",
@@ -740,7 +740,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "caller",
@@ -756,7 +756,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "tableCard",
@@ -778,6 +778,10 @@ export type LiarsBarDapp = {
           },
           {
             "name": "isOpen",
+            "type": "bool"
+          },
+          {
+            "name": "isOver",
             "type": "bool"
           },
           {
@@ -812,7 +816,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           }
         ]
       }
@@ -828,7 +832,7 @@ export type LiarsBarDapp = {
           },
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "cards",
@@ -850,7 +854,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "player",
@@ -866,7 +870,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "player",
@@ -882,7 +886,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           }
         ]
       }
@@ -894,7 +898,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "player",
@@ -914,7 +918,7 @@ export type LiarsBarDapp = {
         "fields": [
           {
             "name": "tableId",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "player",
@@ -956,7 +960,7 @@ export const IDL: LiarsBarDapp = {
           "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
         }
       ],
-      "args": [{ "name": "tableId", "type": "u64" }]
+      "args": [{ "name": "tableId", "type": "u128" }]
     },
     {
       "name": "joinTable",
@@ -991,43 +995,9 @@ export const IDL: LiarsBarDapp = {
         }
       ],
       "args": [
-        { "name": "tableId", "type": "u64" },
+        { "name": "tableId", "type": "u128" },
         { "name": "characterId", "type": "string" }
       ]
-    },
-    {
-      "name": "quitTable",
-      "discriminator": [72, 118, 106, 80, 28, 10, 132, 188],
-      "accounts": [
-        { "name": "signer", "writable": true, "signer": true },
-        {
-          "name": "table",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              { "kind": "const", "value": [116, 97, 98, 108, 101] },
-              { "kind": "arg", "path": "tableId" }
-            ]
-          }
-        },
-        {
-          "name": "players",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              { "kind": "const", "value": [112, 108, 97, 121, 101, 114] },
-              { "kind": "arg", "path": "tableId" },
-              { "kind": "account", "path": "signer" }
-            ]
-          }
-        },
-        { "name": "systemProgram", "address": "11111111111111111111111111111111" },
-        {
-          "name": "incoLightningProgram",
-          "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
-        }
-      ],
-      "args": [{ "name": "tableId", "type": "u64" }]
     },
     {
       "name": "placeCards",
@@ -1062,9 +1032,43 @@ export const IDL: LiarsBarDapp = {
         }
       ],
       "args": [
-        { "name": "tableId", "type": "u64" },
+        { "name": "tableId", "type": "u128" },
         { "name": "pickedIndexs", "type": "bytes" }
       ]
+    },
+    {
+      "name": "quitTable",
+      "discriminator": [72, 118, 106, 80, 28, 10, 132, 188],
+      "accounts": [
+        { "name": "signer", "writable": true, "signer": true },
+        {
+          "name": "table",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [116, 97, 98, 108, 101] },
+              { "kind": "arg", "path": "tableId" }
+            ]
+          }
+        },
+        {
+          "name": "players",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "const", "value": [112, 108, 97, 121, 101, 114] },
+              { "kind": "arg", "path": "tableId" },
+              { "kind": "account", "path": "signer" }
+            ]
+          }
+        },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" },
+        {
+          "name": "incoLightningProgram",
+          "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
+        }
+      ],
+      "args": [{ "name": "tableId", "type": "u128" }]
     },
     {
       "name": "startRound",
@@ -1098,7 +1102,7 @@ export const IDL: LiarsBarDapp = {
           "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
         }
       ],
-      "args": [{ "name": "tableId", "type": "u64" }]
+      "args": [{ "name": "tableId", "type": "u128" }]
     },
     {
       "name": "suffleCards",
@@ -1132,7 +1136,7 @@ export const IDL: LiarsBarDapp = {
           "address": "5sjEbPiqgZrYwR31ahR6Uk9wf5awoX61YGg7jExQSwaj"
         }
       ],
-      "args": [{ "name": "tableId", "type": "u64" }]
+      "args": [{ "name": "tableId", "type": "u128" }]
     }
   ],
   "accounts": [
@@ -1173,7 +1177,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "player", "type": "pubkey" }
         ]
       }
@@ -1183,7 +1187,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "player", "type": "pubkey" }
         ]
       }
@@ -1197,7 +1201,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "caller", "type": "pubkey" }
         ]
       }
@@ -1207,11 +1211,12 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "tableCard", "type": "u8" },
           { "name": "cardsOnTable", "type": { "vec": { "defined": { "name": "card" } } } },
           { "name": "remainingBullet", "type": "bytes" },
           { "name": "isOpen", "type": "bool" },
+          { "name": "isOver", "type": "bool" },
           { "name": "players", "type": { "vec": "pubkey" } },
           { "name": "deck", "type": { "vec": { "vec": "bool" } } },
           { "name": "trunToPlay", "type": "u8" },
@@ -1223,7 +1228,7 @@ export const IDL: LiarsBarDapp = {
       "name": "liarsTableCreated",
       "type": {
         "kind": "struct",
-        "fields": [{ "name": "tableId", "type": "u64" }]
+        "fields": [{ "name": "tableId", "type": "u128" }]
       }
     },
     {
@@ -1232,7 +1237,7 @@ export const IDL: LiarsBarDapp = {
         "kind": "struct",
         "fields": [
           { "name": "characterId", "type": "string" },
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "cards", "type": { "vec": { "defined": { "name": "card" } } } }
         ]
       }
@@ -1242,7 +1247,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "player", "type": "pubkey" }
         ]
       }
@@ -1252,7 +1257,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "player", "type": "pubkey" }
         ]
       }
@@ -1261,7 +1266,7 @@ export const IDL: LiarsBarDapp = {
       "name": "roundStarted",
       "type": {
         "kind": "struct",
-        "fields": [{ "name": "tableId", "type": "u64" }]
+        "fields": [{ "name": "tableId", "type": "u128" }]
       }
     },
     {
@@ -1269,7 +1274,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "player", "type": "pubkey" },
           { "name": "next", "type": "pubkey" }
         ]
@@ -1280,7 +1285,7 @@ export const IDL: LiarsBarDapp = {
       "type": {
         "kind": "struct",
         "fields": [
-          { "name": "tableId", "type": "u64" },
+          { "name": "tableId", "type": "u128" },
           { "name": "player", "type": "pubkey" }
         ]
       }

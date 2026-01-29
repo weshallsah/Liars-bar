@@ -10,13 +10,12 @@ import { IDL } from "./idl";
 import { PROGRAM_ID, INCO_LIGHTNING_PROGRAM_ID } from "./config";
 
 /**
- * Generate a random u64 table ID from UUID
+ * Generate a random u128 table ID from UUID
  */
 function generateTableId(): BN {
   const uuid = crypto.randomUUID().replace(/-/g, "");
-  // Take first 16 hex chars (8 bytes = 64 bits)
-  const hex = uuid.slice(0, 16);
-  return new BN(hex, 16);
+  // Use full 32 hex chars (16 bytes = 128 bits) for u128
+  return new BN(uuid, 16);
 }
 
 /**
@@ -104,9 +103,9 @@ export function useCreateTable(onTableCreated?: (tableId: string) => void) {
       // Generate random table ID
       const tableId = generateTableId();
 
-      // Derive table PDA
+      // Derive table PDA (using 16 bytes for u128)
       const [tableAddress] = PublicKey.findProgramAddressSync(
-        [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 8)],
+        [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 16)],
         PROGRAM_ID,
       );
 

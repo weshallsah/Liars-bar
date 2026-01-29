@@ -33,11 +33,11 @@ export function useTableSubscription({
   const subscriptionRef = useRef<number | null>(null);
   const accountSubscriptionRef = useRef<number | null>(null);
 
-  // Derive table PDA
+  // Derive table PDA (using 16 bytes for u128)
   const getTableAddress = useCallback(() => {
     const tableId = new BN(tableIdString);
     const [tableAddress] = PublicKey.findProgramAddressSync(
-      [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 8)],
+      [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 16)],
       PROGRAM_ID
     );
     return tableAddress;

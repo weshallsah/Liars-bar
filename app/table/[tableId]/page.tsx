@@ -1,25 +1,25 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { PokerTable } from "@/components/PokerTable";
+import { CharacterSelect } from "@/components/CharacterSelect";
 import { useTable } from "@/lib/solana/useTable";
 
-// Character definitions with colors
-const CHARACTERS: Record<string, { name: string; image: string; color: string }> = {
-  bull: { name: "Bull", image: "/charactres/bull.png", color: "from-red-600 to-red-900" },
-  cat: { name: "Cat", image: "/charactres/cat.png", color: "from-purple-500 to-purple-800" },
-  dog: { name: "Dog", image: "/charactres/dog.png", color: "from-amber-500 to-amber-800" },
-  lion: { name: "Lion", image: "/charactres/lions.png", color: "from-yellow-500 to-orange-700" },
-  pig: { name: "Pig", image: "/charactres/pig.png", color: "from-pink-400 to-pink-700" },
-  rabbit: { name: "Rabbit", image: "/charactres/rabbit.png", color: "from-gray-300 to-gray-600" },
-  wolf: { name: "Wolf", image: "/charactres/wolf.png", color: "from-slate-500 to-slate-800" },
+const CHARACTER_MAP: Record<string, { name: string; image: string; color: string }> = {
+  bull: { name: "Bull", image: "/charactres/bull.png", color: "from-red-500 to-rose-600" },
+  cat: { name: "Cat", image: "/charactres/cat.png", color: "from-violet-500 to-purple-600" },
+  dog: { name: "Dog", image: "/charactres/dog.png", color: "from-amber-400 to-orange-500" },
+  lion: { name: "Lion", image: "/charactres/lions.png", color: "from-yellow-400 to-amber-500" },
+  pig: { name: "Pig", image: "/charactres/pig.png", color: "from-pink-400 to-rose-500" },
+  rabbit: { name: "Rabbit", image: "/charactres/rabbit.png", color: "from-slate-300 to-slate-500" },
+  wolf: { name: "Wolf", image: "/charactres/wolf.png", color: "from-slate-400 to-slate-600" },
 };
 
-// Calculate positions for N players equally spaced on an oval
-// Reference: bottom center (270°) = top:70, left:50 | top center (90°) = top:43, left:50
-// Center: top:56.5, left:50 | RadiusY:13.5 | RadiusX:32
 function getPlayerPositions(playerCount: number, currentPlayerIndex: number) {
   const centerTop = 56.5;
   const centerLeft = 50;
@@ -28,17 +28,13 @@ function getPlayerPositions(playerCount: number, currentPlayerIndex: number) {
 
   const positions: { top: number; left: number }[] = [];
   const angleStep = (2 * Math.PI) / playerCount;
-  // Start from 270° (bottom) which is 3π/2 radians, current player always at bottom
   const startAngle = (3 * Math.PI) / 2;
 
   for (let i = 0; i < playerCount; i++) {
-    // Calculate position index relative to current player (current player at index 0 = bottom)
     const posIndex = (i - currentPlayerIndex + playerCount) % playerCount;
     const angle = startAngle + posIndex * angleStep;
-
     const top = centerTop - radiusY * Math.sin(angle);
     const left = centerLeft + radiusX * Math.cos(angle);
-
     positions.push({ top: Math.round(top), left: Math.round(left) });
   }
 
@@ -47,22 +43,73 @@ function getPlayerPositions(playerCount: number, currentPlayerIndex: number) {
 
 export default function TablePage() {
   const params = useParams();
+  const router = useRouter();
   const tableId = params.tableId as string;
-  const { publicKey } = useWallet();
-  const { tableData } = useTable(tableId);
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
 
-  // Get current player index (the connected wallet's position)
+  const handleCopyTableId = async () => {
+    await navigator.clipboard.writeText(tableId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const {
+    tableData,
+    isLoading,
+    error,
+    isPlayerInTable,
+    takenCharacters,
+    joinTable,
+    isJoining,
+    startRound,
+    isStarting,
+    canStart,
+    gameState,
+    quitTable,
+    isQuitting,
+  } = useTable(tableId);
+
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!publicKey) {
+        setBalance(null);
+        return;
+      }
+      try {
+        const bal = await connection.getBalance(publicKey);
+        setBalance(bal / LAMPORTS_PER_SOL);
+      } catch (err) {
+        console.error("Error fetching balance:", err);
+      }
+    };
+
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 10000); // Refresh every 10s
+    return () => clearInterval(interval);
+  }, [publicKey, connection]);
+
+  const handleLeaveTable = async () => {
+    const success = await quitTable();
+    if (success) {
+      router.push("/");
+    }
+  };
+
   const currentPlayerIndex = tableData?.players.findIndex(
     (p) => p === publicKey?.toString()
   ) ?? 0;
 
-  // Calculate positions based on number of players
-  const playerCount = tableData?.playerInfos.length ?? 0;
-  const positions = getPlayerPositions(playerCount, currentPlayerIndex);
+  const playersWithCharacters = tableData?.playerInfos.filter(p => p.characterId) ?? [];
+  const playerCount = playersWithCharacters.length;
+  const positions = getPlayerPositions(Math.max(playerCount, 1), currentPlayerIndex >= 0 ? currentPlayerIndex : 0);
 
-  // Map players with their positions and character data
-  const playersWithPositions = tableData?.playerInfos.map((playerInfo, index) => {
-    const character = playerInfo.characterId ? CHARACTERS[playerInfo.characterId] : null;
+  const playersWithPositions = playersWithCharacters.map((playerInfo, index) => {
+    const character = playerInfo.characterId ? CHARACTER_MAP[playerInfo.characterId] : null;
     const position = positions[index] || { top: 50, left: 50 };
 
     return {
@@ -75,122 +122,317 @@ export default function TablePage() {
       left: position.left,
       isCurrentPlayer: playerInfo.address === publicKey?.toString(),
     };
-  }) ?? [];
+  });
+
+  const handleJoin = async () => {
+    if (!selectedCharacter) return;
+    const success = await joinTable(selectedCharacter);
+    if (success) setSelectedCharacter(null);
+  };
+
+  const handleStartGame = async () => {
+    await startRound();
+  };
+
+  // Loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Error
+  if (error && !tableData) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+            <span className="text-red-500 text-2xl">✕</span>
+          </div>
+          <h2 className="text-white text-xl font-semibold mb-2">Table Not Found</h2>
+          <p className="text-white/50 mb-6">{error}</p>
+          <a href="/" className="px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-white/90 transition">
+            Go Home
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Character selection
+  if (!isPlayerInTable && tableData?.isOpen) {
+    return (
+      <div className="min-h-screen bg-black relative overflow-hidden">
+        {/* Gradient orbs */}
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-[100px]" />
+
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-2xl">
+            {/* Header */}
+            <div className="text-center mb-10">
+              <h1 className="text-4xl font-bold text-white mb-2">Join Table</h1>
+              <button
+                onClick={handleCopyTableId}
+                className="inline-flex items-center gap-2 text-white/40 hover:text-white/60 transition text-sm"
+              >
+                <span className="font-mono">{tableId.slice(0, 12)}...</span>
+                <span>{copied ? "✓" : "⧉"}</span>
+              </button>
+            </div>
+
+            {/* Wallet warning */}
+            {!connected && (
+              <div className="mb-6 p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-center">
+                <p className="text-yellow-500 text-sm">Connect wallet to join</p>
+              </div>
+            )}
+
+            {/* Character select card */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8">
+              <p className="text-white/60 text-sm mb-6 text-center">Choose your character</p>
+
+              <CharacterSelect
+                selectedCharacter={selectedCharacter}
+                takenCharacters={takenCharacters}
+                onSelect={setSelectedCharacter}
+                disabled={!connected || isJoining}
+              />
+
+              {error && (
+                <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <p className="text-red-400 text-sm text-center">{error}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleJoin}
+                disabled={!selectedCharacter || !connected || isJoining}
+                className="mt-8 w-full py-4 bg-white text-black font-semibold rounded-2xl disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition flex items-center justify-center gap-3"
+              >
+                {isJoining ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    Joining...
+                  </>
+                ) : (
+                  <>Join{selectedCharacter && ` as ${CHARACTER_MAP[selectedCharacter]?.name}`}</>
+                )}
+              </button>
+            </div>
+
+            {/* Players waiting */}
+            {playersWithCharacters.length > 0 && (
+              <div className="mt-8 flex justify-center gap-3">
+                {playersWithCharacters.map((player) => {
+                  const char = CHARACTER_MAP[player.characterId!];
+                  return (
+                    <div key={player.address} className="group">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${char?.color} p-0.5 transition group-hover:scale-110`}>
+                        <div className="w-full h-full rounded-[10px] bg-black/50 overflow-hidden">
+                          <Image
+                            src={char?.image || "/charactres/bull.png"}
+                            alt={char?.name || ""}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main game view
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex relative overflow-hidden">
-      {/* Bar Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Dark wood paneling walls */}
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-950/40 via-stone-950 to-stone-950" />
-
-        {/* Wood panel texture */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              transparent 0px,
-              transparent 80px,
-              rgba(139,69,19,0.3) 80px,
-              rgba(139,69,19,0.3) 82px
-            )`
-          }}
-        />
-
-        {/* Horizontal wood trim */}
-        <div className="absolute top-[30%] inset-x-0 h-2 bg-gradient-to-b from-amber-900/40 to-amber-950/40" />
-
-        {/* Wainscoting effect on lower wall */}
-        <div
-          className="absolute bottom-0 inset-x-0 h-[35%] opacity-30"
-          style={{
-            background: `
-              linear-gradient(to bottom, rgba(120,80,40,0.3) 0%, rgba(60,40,20,0.4) 100%),
-              repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent 100px,
-                rgba(80,50,20,0.4) 100px,
-                rgba(80,50,20,0.4) 102px
-              )
-            `
-          }}
-        />
-
-        {/* Baseboard */}
-        <div className="absolute bottom-0 inset-x-0 h-4 bg-gradient-to-t from-amber-950 to-amber-900/50" />
-
-        {/* Ambient wall lights glow */}
-        <div className="absolute top-[20%] left-[15%] w-32 h-48 bg-amber-500/10 blur-3xl rounded-full" />
-        <div className="absolute top-[20%] right-[35%] w-32 h-48 bg-amber-500/10 blur-3xl rounded-full" />
-
-        {/* Ceiling dark gradient */}
-        <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/80 to-transparent" />
-
-        {/* Floor reflection/shadow */}
-        <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-black/60 to-transparent" />
-
-        {/* Smoke/haze effect */}
-        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-amber-900/5 to-transparent opacity-50" />
-
-        {/* Decorative frames on wall */}
-        <div className="absolute top-[12%] left-[8%] w-20 h-28 border-4 border-amber-900/30 rounded-sm bg-amber-950/20" />
-        <div className="absolute top-[10%] left-[20%] w-16 h-20 border-4 border-amber-900/30 rounded-sm bg-amber-950/20" />
-
-        {/* Bar shelf hints in background */}
-        <div className="absolute top-[15%] right-[32%] w-40 h-1 bg-amber-800/20" />
-        <div className="absolute top-[25%] right-[32%] w-40 h-1 bg-amber-800/20" />
-
-        {/* Bottle silhouettes */}
-        <div className="absolute top-[8%] right-[34%] w-4 h-12 bg-amber-900/20 rounded-t-full" />
-        <div className="absolute top-[10%] right-[38%] w-3 h-10 bg-amber-900/15 rounded-t-full" />
-        <div className="absolute top-[9%] right-[41%] w-4 h-11 bg-amber-900/20 rounded-t-full" />
-        <div className="absolute top-[18%] right-[35%] w-3 h-10 bg-amber-900/15 rounded-t-full" />
-        <div className="absolute top-[19%] right-[39%] w-4 h-9 bg-amber-900/20 rounded-t-full" />
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]" />
       </div>
 
-      {/* Left side - 70% */}
-      <div className="w-[70%] h-screen flex items-end justify-center relative z-10" style={{ perspective: "1000px" }}>
-        <div className="w-full h-[60%] mb-8" style={{ transform: "rotateX(65deg)" }}>
-          <PokerTable />
-        </div>
+      {/* Top Right Header - Account Info */}
+      {connected && publicKey && (
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+          {/* Balance */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 px-4 py-2 flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white">◎</span>
+            </div>
+            <span className="text-white font-medium">
+              {balance !== null ? balance.toFixed(3) : "..."} SOL
+            </span>
+          </div>
 
-        {/* Players around the table - outside the tilted container */}
-        {playersWithPositions.map((player) => (
-          <div
-            key={player.address}
-            className="absolute z-20"
-            style={{
-              top: `${player.top}%`,
-              left: `${player.left}%`,
-            }}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br ${player.color} p-0.5 shadow-lg ${player.isCurrentPlayer ? "ring-2 ring-amber-400" : ""}`}>
-                <div className="w-full h-full rounded-[10px] bg-black/40 flex items-center justify-center overflow-hidden">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${player.color} opacity-30 blur-sm`} />
-                  <Image
-                    src={player.image}
-                    alt={player.name}
-                    width={64}
-                    height={64}
-                    className="relative z-10 w-full h-full object-contain drop-shadow-lg"
-                  />
+          {/* Account */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 px-4 py-2">
+            <span className="text-white/60 font-mono text-sm">
+              {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+            </span>
+          </div>
+
+          {/* Leave Button */}
+          {isPlayerInTable && tableData?.isOpen && (
+            <button
+              onClick={handleLeaveTable}
+              disabled={isQuitting}
+              className="bg-red-500/10 hover:bg-red-500/20 backdrop-blur-xl rounded-xl border border-red-500/30 px-4 py-2 text-red-400 font-medium transition flex items-center gap-2 disabled:opacity-50"
+            >
+              {isQuitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-red-400/20 border-t-red-400 rounded-full animate-spin" />
+                  Leaving...
+                </>
+              ) : (
+                <>
+                  <span>✕</span>
+                  Leave
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {gameState === "lobby" ? (
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+          <div className="w-full max-w-4xl">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <p className="text-white/40 text-sm uppercase tracking-widest mb-3">Liar&apos;s Bar</p>
+              <h1 className="text-5xl font-bold text-white mb-4">Waiting Room</h1>
+              <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-white/60">{playersWithCharacters.length}/5 players</span>
                 </div>
+                <span className="text-white/20">•</span>
+                <button
+                  onClick={handleCopyTableId}
+                  className="text-white/40 hover:text-white/60 transition text-sm font-mono flex items-center gap-2"
+                >
+                  {tableId.slice(0, 8)}...{tableId.slice(-4)}
+                  <span className="text-xs">{copied ? "✓" : "⧉"}</span>
+                </button>
               </div>
-              <div className={`px-2 py-0.5 rounded-full bg-gradient-to-r ${player.color} shadow-md`}>
-                <span className="text-white text-xs font-semibold drop-shadow-sm">
+            </div>
+
+            {/* Player cards */}
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+              {playersWithPositions.map((player, idx) => (
+                <div
+                  key={player.address}
+                  className={`relative bg-white/5 backdrop-blur rounded-2xl p-6 border transition-all hover:bg-white/10 ${
+                    player.isCurrentPlayer ? "border-white/30 ring-1 ring-white/20" : "border-white/10"
+                  }`}
+                >
+                  {idx === 0 && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-amber-500 text-black text-[10px] font-bold uppercase rounded">
+                      Host
+                    </div>
+                  )}
+                  {player.isCurrentPlayer && idx !== 0 && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase rounded">
+                      You
+                    </div>
+                  )}
+
+                  <div className="flex flex-col items-center">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${player.color} p-0.5 mb-4`}>
+                      <div className="w-full h-full rounded-[14px] bg-black/40 overflow-hidden">
+                        <Image
+                          src={player.image}
+                          alt={player.name}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-white font-medium">{player.name}</p>
+                    <p className="text-white/30 text-xs font-mono mt-1">
+                      {player.address.slice(0, 4)}...{player.address.slice(-4)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+            </div>
+
+            {/* Action */}
+            {isPlayerInTable && (
+              <div className="flex justify-center">
+                {canStart ? (
+                  <button
+                    onClick={handleStartGame}
+                    disabled={isStarting}
+                    className="px-12 py-4 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition disabled:opacity-50 flex items-center gap-3"
+                  >
+                    {isStarting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <span>▶</span>
+                        Start Game
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-white/40">Need at least 2 players to start</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Active game */
+        <div className="relative z-10 h-screen flex items-center justify-center" style={{ perspective: "1000px" }}>
+          <div className="w-full h-[60%] mb-8 self-end" style={{ transform: "rotateX(65deg)" }}>
+            <PokerTable />
+          </div>
+
+          {/* Players */}
+          {playersWithPositions.map((player) => (
+            <div
+              key={player.address}
+              className="absolute z-20"
+              style={{ top: `${player.top}%`, left: `${player.left}%` }}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${player.color} p-0.5 ${player.isCurrentPlayer ? "ring-2 ring-white" : ""}`}>
+                  <div className="w-full h-full rounded-[10px] bg-black/50 overflow-hidden">
+                    <Image
+                      src={player.image}
+                      alt={player.name}
+                      width={56}
+                      height={56}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-black/60 backdrop-blur rounded-full text-white text-xs font-medium">
                   {player.name}
                 </span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Right side - 30% */}
-      <div className="w-[30%] bg-neutral-900/80 border-l border-amber-900/30 backdrop-blur-sm relative z-10">
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

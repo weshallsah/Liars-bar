@@ -11,6 +11,12 @@ export function WalletStatus() {
   const pathname = usePathname();
   const router = useRouter();
   const isOnGamePage = pathname?.startsWith("/game/");
+  const isOnTablePage = pathname?.startsWith("/table/");
+
+  // Don't render on table pages - account info is shown in the page header
+  if (isOnTablePage) {
+    return null;
+  }
 
   // Extract tableId from pathname if on game page
   const tableId = useMemo(() => {

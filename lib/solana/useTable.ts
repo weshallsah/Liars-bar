@@ -43,6 +43,7 @@ export function useTable(tableIdString: string) {
   const [isJoining, setIsJoining] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isQuitting, setIsQuitting] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Game state tracking
@@ -55,7 +56,7 @@ export function useTable(tableIdString: string) {
   const getTableAddress = useCallback(() => {
     const tableId = new BN(tableIdString);
     const [tableAddress] = PublicKey.findProgramAddressSync(
-      [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 8)],
+      [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 16)],
       PROGRAM_ID
     );
     return tableAddress;
@@ -64,6 +65,9 @@ export function useTable(tableIdString: string) {
   // Track if initial fetch is done for the current wallet
   const initialFetchDone = useRef(false);
   const lastWalletKey = useRef<string | null>(null);
+
+  // Ref to track if shuffle is in progress (avoids stale closure issues)
+  const isShufflingRef = useRef(false);
 
   // Fetch table data
   const fetchTable = useCallback(async (isInitialFetch = false) => {
@@ -81,14 +85,6 @@ export function useTable(tableIdString: string) {
         return;
       }
 
-      // Helper to get character from localStorage
-      const getPlayerCharacter = (playerAddress: string): string | null => {
-        if (typeof window !== "undefined") {
-          return localStorage.getItem(`character-${tableIdString}-${playerAddress}`);
-        }
-        return null;
-      };
-
       // Create provider for decoding
       if (!anchorWallet) {
         // Wallet not connected yet - keep loading state to prevent showing character selection
@@ -104,13 +100,41 @@ export function useTable(tableIdString: string) {
       const table = await (program.account as any).liarsTable.fetch(tableAddress);
       const playerAddresses = table.players.map((p: PublicKey) => p.toString());
 
+      // Fetch character IDs from on-chain player accounts
+      const tableId = new BN(tableIdString);
+      const playerInfos: PlayerInfo[] = await Promise.all(
+        playerAddresses.map(async (address: string) => {
+          try {
+            // Derive player PDA
+            const [playerPDA] = PublicKey.findProgramAddressSync(
+              [
+                Buffer.from("player"),
+                tableId.toArrayLike(Buffer, "le", 16),
+                new PublicKey(address).toBuffer(),
+              ],
+              PROGRAM_ID
+            );
+
+            // Fetch player account
+            const playerAccount = await (program.account as any).player.fetch(playerPDA);
+            return {
+              address,
+              characterId: playerAccount.characterId || null,
+            };
+          } catch {
+            // Player account might not exist yet (table creator before joining)
+            return {
+              address,
+              characterId: null,
+            };
+          }
+        })
+      );
+
       setTableData({
         tableId: table.tableId.toString(),
         players: playerAddresses,
-        playerInfos: playerAddresses.map((address: string) => ({
-          address,
-          characterId: getPlayerCharacter(address),
-        })),
+        playerInfos,
         isOpen: table.isOpen,
         tableCard: table.tableCard,
         trunToPlay: table.trunToPlay,
@@ -176,7 +200,7 @@ export function useTable(tableIdString: string) {
       const [playerAddress] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("player"),
-          tableId.toArrayLike(Buffer, "le", 8),
+          tableId.toArrayLike(Buffer, "le", 16),
           publicKey.toBuffer(),
         ],
         PROGRAM_ID
@@ -239,14 +263,6 @@ export function useTable(tableIdString: string) {
         lastValidBlockHeight,
       }, "confirmed");
 
-      // Store character selection in localStorage after successful join
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          `character-${tableIdString}-${publicKey.toString()}`,
-          characterId
-        );
-      }
-
       console.log("Joined table! Tx:", tx);
       await fetchTable();
       return true;
@@ -282,7 +298,7 @@ export function useTable(tableIdString: string) {
       const [playerAddress] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("player"),
-          tableId.toArrayLike(Buffer, "le", 8),
+          tableId.toArrayLike(Buffer, "le", 16),
           publicKey.toBuffer(),
         ],
         PROGRAM_ID
@@ -358,7 +374,7 @@ export function useTable(tableIdString: string) {
       const [playerAddress] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("player"),
-          tableId.toArrayLike(Buffer, "le", 8),
+          tableId.toArrayLike(Buffer, "le", 16),
           publicKey.toBuffer(),
         ],
         PROGRAM_ID
@@ -401,11 +417,6 @@ export function useTable(tableIdString: string) {
         lastValidBlockHeight,
       }, "confirmed");
 
-      // Clear character selection from localStorage
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(`character-${tableIdString}-${publicKey.toString()}`);
-      }
-
       console.log("Quit table! Tx:", tx);
       return true;
     } catch (err: any) {
@@ -416,6 +427,105 @@ export function useTable(tableIdString: string) {
       setIsQuitting(false);
     }
   }, [connection, publicKey, anchorWallet, sendTransaction, tableIdString, getTableAddress]);
+
+  // Shuffle cards
+  const shuffleCards = useCallback(async (): Promise<boolean> => {
+    if (!publicKey || !anchorWallet || !sendTransaction) {
+      console.log("Cannot shuffle: wallet not connected");
+      return false;
+    }
+
+    // Prevent multiple simultaneous shuffle attempts (use ref to avoid stale closure)
+    if (isShufflingRef.current) {
+      console.log("Already shuffling, skipping...");
+      return false;
+    }
+
+    isShufflingRef.current = true;
+    setIsShuffling(true);
+
+    try {
+      const provider = new AnchorProvider(connection, anchorWallet, {
+        commitment: "confirmed",
+      });
+      const program = new Program(IDL as any, provider);
+
+      const tableId = new BN(tableIdString);
+      const tableAddress = getTableAddress();
+
+      // Derive player PDA
+      const [playerAddress] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("player"),
+          tableId.toArrayLike(Buffer, "le", 16),
+          publicKey.toBuffer(),
+        ],
+        PROGRAM_ID
+      );
+
+      // Build compute budget instructions
+      const computeUnitLimit = ComputeBudgetProgram.setComputeUnitLimit({
+        units: 300_000,
+      });
+      const computeUnitPrice = ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 1000,
+      });
+
+      console.log("Building shuffleCards transaction...");
+
+      const txBuilder = (program.methods as any)
+        .suffleCards(tableId)
+        .accounts({
+          signer: publicKey,
+          table: tableAddress,
+          players: playerAddress,
+          systemProgram: SystemProgram.programId,
+          incoLightningProgram: INCO_LIGHTNING_PROGRAM_ID,
+        } as any)
+        .preInstructions([computeUnitLimit, computeUnitPrice]);
+
+      const transaction: Transaction = await txBuilder.transaction();
+
+      // Get fresh blockhash right before sending
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+
+      const tx = await sendTransaction(transaction, connection, {
+        skipPreflight: true, // Skip preflight to speed up
+        maxRetries: 5,
+      });
+
+      console.log("Shuffle transaction sent:", tx);
+
+      // Use a longer timeout for confirmation
+      const confirmation = await connection.confirmTransaction({
+        signature: tx,
+        blockhash,
+        lastValidBlockHeight,
+      }, "confirmed");
+
+      if (confirmation.value.err) {
+        console.error("Shuffle transaction failed:", confirmation.value.err);
+        return false;
+      }
+
+      console.log("Cards shuffled! Tx:", tx);
+      await fetchTable(false);
+      return true;
+    } catch (err: any) {
+      console.error("Error shuffling cards:", err);
+      // If block height exceeded, the tx might still go through
+      if (err.name === "TransactionExpiredBlockheightExceededError") {
+        console.log("Transaction may have succeeded despite timeout, refetching table...");
+        await fetchTable(false);
+      }
+      return false;
+    } finally {
+      isShufflingRef.current = false;
+      setIsShuffling(false);
+    }
+  }, [connection, publicKey, anchorWallet, sendTransaction, tableIdString, getTableAddress, fetchTable]);
 
   // Helper to add event to log
   const addEventLog = useCallback((type: string, message: string, player?: string) => {
@@ -452,7 +562,31 @@ export function useTable(tableIdString: string) {
       case "roundStarted": {
         setGameState("playing");
         addEventLog("roundStarted", "Round started!");
-        fetchTable(false);
+        // Fetch fresh table data, then check if we should shuffle
+        fetchTable(false).then(() => {
+          // Small delay to ensure state is updated
+          setTimeout(async () => {
+            // Re-fetch to get the latest suffleTrun
+            if (!anchorWallet || !publicKey) return;
+            try {
+              const provider = new AnchorProvider(connection, anchorWallet, { commitment: "confirmed" });
+              const program = new Program(IDL as any, provider);
+              const tableAddress = getTableAddress();
+              const table = await (program.account as any).liarsTable.fetch(tableAddress);
+              const playerAddresses = table.players.map((p: PublicKey) => p.toString());
+              const myIndex = playerAddresses.findIndex((p: string) => p === publicKey.toString());
+
+              console.log("Round started - suffleTrun:", table.suffleTrun, "myIndex:", myIndex);
+
+              if (myIndex === table.suffleTrun) {
+                console.log("It's my turn to shuffle, triggering...");
+                shuffleCards();
+              }
+            } catch (err) {
+              console.error("Error checking shuffle turn:", err);
+            }
+          }, 1000);
+        });
         break;
       }
 
@@ -491,6 +625,13 @@ export function useTable(tableIdString: string) {
         addEventLog("suffleCardsForPlayer", `Cards shuffled for ${shortenAddress(playerAddr)}, next: ${shortenAddress(nextAddr)}`, playerAddr);
         setCurrentTurnPlayer(nextAddr);
         fetchTable(false);
+        // If I'm the next player, trigger shuffle after a delay
+        if (publicKey && nextAddr === publicKey.toString()) {
+          console.log("I'm the next player, triggering shuffle after delay...");
+          setTimeout(() => {
+            shuffleCards();
+          }, 1000);
+        }
         break;
       }
 
@@ -505,7 +646,7 @@ export function useTable(tableIdString: string) {
         // For any other events, just refetch
         fetchTable(false);
     }
-  }, [fetchTable, tableIdString, addEventLog]);
+  }, [fetchTable, tableIdString, addEventLog, tableData, publicKey, shuffleCards, anchorWallet, connection, getTableAddress]);
 
   // Handle account changes via WebSocket
   const handleAccountChange = useCallback(() => {
@@ -570,11 +711,13 @@ export function useTable(tableIdString: string) {
     joinTable,
     startRound,
     quitTable,
+    shuffleCards,
     fetchTable,
 
     // Action states
     isJoining,
     isStarting,
     isQuitting,
+    isShuffling,
   };
 }
