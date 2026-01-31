@@ -31,5 +31,8 @@ export const INCO_LIGHTNING_PROGRAM_ID = new PublicKey(
 );
 
 // Solana cluster configuration
-export const SOLANA_RPC_ENDPOINT = "https://api.devnet.solana.com";
-export const SOLANA_WS_ENDPOINT = "wss://api.devnet.solana.com";
+// Use environment variable with fallback to public endpoint
+export const SOLANA_RPC_ENDPOINT =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_ENDPOINT || "https://api.devnet.solana.com";
+export const SOLANA_WS_ENDPOINT =
+  process.env.NEXT_PUBLIC_SOLANA_WS_ENDPOINT || "wss://api.devnet.solana.com";

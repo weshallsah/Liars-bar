@@ -12,11 +12,7 @@ export function WalletStatus() {
   const router = useRouter();
   const isOnGamePage = pathname?.startsWith("/game/");
   const isOnTablePage = pathname?.startsWith("/table/");
-
-  // Don't render on table pages - account info is shown in the page header
-  if (isOnTablePage) {
-    return null;
-  }
+  const isOnHomePage = pathname === "/";
 
   // Extract tableId from pathname if on game page
   const tableId = useMemo(() => {
@@ -34,7 +30,8 @@ export function WalletStatus() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
-  // Use table hook only when on game page
+  // Use table hook only when on game page with valid tableId
+  // Pass empty string - useTable will handle it gracefully
   const { quitTable, isPlayerInTable } = useTable(tableId);
 
   useEffect(() => {
@@ -114,6 +111,11 @@ export function WalletStatus() {
       setIsLeaving(false);
     }
   };
+
+  // Don't render on homepage or table pages - wallet is in the page header
+  if (isOnTablePage || isOnHomePage) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-50">

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { PublicKey, Logs } from "@solana/web3.js";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
@@ -32,9 +32,15 @@ export function useTableSubscription({
   const anchorWallet = useAnchorWallet();
   const subscriptionRef = useRef<number | null>(null);
   const accountSubscriptionRef = useRef<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Derive table PDA (using 16 bytes for u128)
   const getTableAddress = useCallback(() => {
+    if (!tableIdString || tableIdString.trim() === "") {
+      throw new Error("Table ID is required");
+    }
     const tableId = new BN(tableIdString);
     const [tableAddress] = PublicKey.findProgramAddressSync(
       [Buffer.from("table"), tableId.toArrayLike(Buffer, "le", 16)],
@@ -83,12 +89,17 @@ export function useTableSubscription({
     [connection, anchorWallet, tableIdString]
   );
 
-  // Subscribe to program logs (for events)
+  // Subscribe to program logs (for events) with retry logic
   useEffect(() => {
     if (!onEvent) return;
 
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 5000; // 5 seconds
+
     const subscribeToLogs = async () => {
       try {
+        setConnectionError(null);
         subscriptionRef.current = connection.onLogs(
           PROGRAM_ID,
           (logs: Logs) => {
@@ -102,30 +113,62 @@ export function useTableSubscription({
           "confirmed"
         );
 
+        setIsSubscribed(true);
+        retryCount = 0; // Reset retry count on success
         console.log("Subscribed to program logs, subscription ID:", subscriptionRef.current);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error subscribing to logs:", err);
+        setConnectionError(err?.message || "WebSocket connection failed");
+        setIsSubscribed(false);
+
+        // Retry with exponential backoff
+        if (retryCount < maxRetries) {
+          retryCount++;
+          const delay = retryDelay * Math.pow(2, retryCount - 1);
+          console.log(`Retrying log subscription in ${delay}ms (attempt ${retryCount}/${maxRetries})...`);
+
+          retryTimeoutRef.current = setTimeout(() => {
+            subscribeToLogs();
+          }, delay);
+        } else {
+          console.error("Max retries reached for log subscription. Using polling fallback.");
+        }
       }
     };
 
     subscribeToLogs();
 
     return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       if (subscriptionRef.current !== null) {
-        connection.removeOnLogsListener(subscriptionRef.current);
+        try {
+          connection.removeOnLogsListener(subscriptionRef.current);
+        } catch (err) {
+          console.warn("Error removing logs listener:", err);
+        }
         subscriptionRef.current = null;
+        setIsSubscribed(false);
       }
     };
   }, [connection, onEvent, parseLogsForEvents]);
 
-  // Subscribe to account changes (for table data updates)
+  // Subscribe to account changes (for table data updates) with retry logic
   useEffect(() => {
     if (!onAccountChange) return;
+    if (!tableIdString || tableIdString.trim() === "") return;
 
     const tableAddress = getTableAddress();
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 5000; // 5 seconds
+    let accountRetryTimeout: NodeJS.Timeout | null = null;
 
     const subscribeToAccount = async () => {
       try {
+        setConnectionError(null);
         accountSubscriptionRef.current = connection.onAccountChange(
           tableAddress,
           () => {
@@ -134,24 +177,51 @@ export function useTableSubscription({
           "confirmed"
         );
 
+        setIsSubscribed(true);
+        retryCount = 0; // Reset retry count on success
         console.log("Subscribed to account changes, subscription ID:", accountSubscriptionRef.current);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error subscribing to account:", err);
+        setConnectionError(err?.message || "WebSocket connection failed");
+        setIsSubscribed(false);
+
+        // Retry with exponential backoff
+        if (retryCount < maxRetries) {
+          retryCount++;
+          const delay = retryDelay * Math.pow(2, retryCount - 1);
+          console.log(`Retrying account subscription in ${delay}ms (attempt ${retryCount}/${maxRetries})...`);
+
+          accountRetryTimeout = setTimeout(() => {
+            subscribeToAccount();
+          }, delay);
+        } else {
+          console.error("Max retries reached for account subscription. Using polling fallback.");
+        }
       }
     };
 
     subscribeToAccount();
 
     return () => {
+      if (accountRetryTimeout) {
+        clearTimeout(accountRetryTimeout);
+        accountRetryTimeout = null;
+      }
       if (accountSubscriptionRef.current !== null) {
-        connection.removeAccountChangeListener(accountSubscriptionRef.current);
+        try {
+          connection.removeAccountChangeListener(accountSubscriptionRef.current);
+        } catch (err) {
+          console.warn("Error removing account change listener:", err);
+        }
         accountSubscriptionRef.current = null;
+        setIsSubscribed(false);
       }
     };
-  }, [connection, getTableAddress, onAccountChange]);
+  }, [connection, getTableAddress, onAccountChange, tableIdString]);
 
   return {
-    isSubscribed: subscriptionRef.current !== null || accountSubscriptionRef.current !== null,
+    isSubscribed,
+    connectionError,
   };
 }
 

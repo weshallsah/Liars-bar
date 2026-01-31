@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
+  --background: #030712;
   --foreground: #ededed;
+  --gold: #F59E0B;
+  --gold-glow: rgba(245, 158, 11, 0.4);
+
+  /* Russian Roulette Theme - Gritty & Dangerous */
+  --danger-red: #DC2626;
+  --danger-red-glow: rgba(220, 38, 38, 0.5);
+  --blood-red: #991B1B;
+  --dark-steel: #1F2937;
+  --darker-steel: #111827;
+  --bullet-gold: #FFD700;
+  --bullet-glow: rgba(255, 215, 0, 0.6);
+  --smoke-gray: #4B5563;
+  --tension-red: #EF4444;
 }
 
 @theme inline {
@@ -10,6 +23,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Custom breakpoint for extra small screens (375px+) */
+  --breakpoint-xs: 375px;
 }
 
 body {
@@ -18,33 +33,672 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-/* 3D Card Effects */
+/* ============================================
+   PREMIUM ANIMATIONS
+   ============================================ */
+
+/* Shimmer effect for buttons */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* Glow pulse effect */
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Card flip animation */
+@keyframes card-flip {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(90deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+.animate-card-flip {
+  animation: card-flip 0.6s ease-in-out;
+}
+
+/* Pulse ring animation */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* Gradient shift animation */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Spotlight effect */
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2);
+  }
+}
+
+.animate-spotlight {
+  animation: spotlight 2s ease-out infinite;
+}
+
+/* ============================================
+   3D EFFECTS
+   ============================================ */
+
 .perspective-1000 {
   perspective: 1000px;
+}
+
+.perspective-1500 {
+  perspective: 1500px;
 }
 
 .transform-gpu {
   transform: translateZ(0);
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
-/* Loading Animations */
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* ============================================
+   GLASS MORPHISM
+   ============================================ */
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   BUTTON EFFECTS
+   ============================================ */
+
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, var(--gold), transparent, var(--gold));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-glow:hover::before {
+  opacity: 1;
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+}
+
+/* ============================================
+   TEXT EFFECTS
+   ============================================ */
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 50%, #D97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-glow {
+  text-shadow: 0 0 20px var(--gold-glow);
+}
+
+/* ============================================
+   SELECTION
+   ============================================ */
+
+::selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: white;
+}
+
+::-moz-selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: white;
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
   }
-  50% {
-    transform: translateY(-20px);
+  100% {
+    transform: translateX(100%);
   }
 }
 
-@keyframes pulse {
+.loading-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: loading-bar 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   CARD EFFECTS
+   ============================================ */
+
+.card-shadow {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 20px 40px -10px rgba(0, 0, 0, 0.5);
+}
+
+.card-shadow-hover:hover {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -2px rgba(0, 0, 0, 0.3),
+    0 30px 60px -15px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================
+   TRANSITIONS
+   ============================================ */
+
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.transition-spring {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ============================================
+   MOBILE OPTIMIZATIONS
+   ============================================ */
+
+/* Ensure buttons have proper tap targets (minimum 44x44px) */
+@media (max-width: 767px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .hover-effect:hover {
+    transform: none;
+    box-shadow: inherit;
+  }
+}
+
+/* Safe area padding for notched devices */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-top {
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Smooth touch feedback */
+.touch-feedback {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ============================================
+   SCROLLBAR HIDE
+   ============================================ */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   LOBBY ANIMATIONS
+   ============================================ */
+
+/* Waiting slot pulse */
+@keyframes waiting-pulse {
   0%, 100% {
     opacity: 0.3;
-    transform: scale(0.8);
+    transform: scale(1);
   }
   50% {
-    opacity: 1;
-    transform: scale(1.2);
+    opacity: 0.6;
+    transform: scale(1.02);
   }
+}
+
+.animate-waiting-pulse {
+  animation: waiting-pulse 2s ease-in-out infinite;
+}
+
+/* Slot appear animation */
+@keyframes slot-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slot-appear {
+  animation: slot-appear 0.4s ease-out forwards;
+}
+
+/* Ready badge pulse */
+@keyframes ready-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-ready-pulse {
+  animation: ready-pulse 2s ease-in-out infinite;
+}
+
+/* Character hover glow */
+.character-glow {
+  transition: all 0.3s ease;
+}
+
+.character-glow:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+/* ============================================
+   HERO SHOWCASE ANIMATIONS
+   ============================================ */
+
+/* Stat bar fill animation */
+@keyframes stat-fill {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-stat-fill {
+  animation: stat-fill 1s ease-out forwards;
+}
+
+/* Hero entrance animation */
+@keyframes hero-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  60% {
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-hero-entrance {
+  animation: hero-entrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Carousel snap scroll */
+.snap-x {
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}
+
+/* Grayscale effect for locked characters */
+.grayscale {
+  filter: grayscale(100%);
+  transition: filter 0.3s ease;
+}
+
+/* Preview hover glow */
+@keyframes preview-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
+  }
+}
+
+.animate-preview-glow {
+  animation: preview-glow 2s ease-in-out infinite;
+}
+
+/* Squad drawer slide */
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out forwards;
+}
+
+/* Shine effect for ready state */
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+.animate-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shine 3s ease-in-out infinite;
+}
+
+/* ============================================
+   OVERFLOW FIXES
+   ============================================ */
+
+/* Prevent horizontal overflow on mobile */
+@media (max-width: 1023px) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Smooth scrolling for all scrollable containers */
+* {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Ensure viewport height calculations work properly */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+.max-h-screen {
+  max-height: 100vh;
+  max-height: 100dvh;
+}
+
+/* Fix for character preview scaling */
+@media (max-width: 640px) {
+  .character-preview-scale {
+    transform: scale(0.9);
+  }
+}
+
+/* Prevent content from pushing beyond viewport */
+.no-overflow {
+  overflow: hidden;
+}
+
+.overflow-y-scroll-touch {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================
+   RUSSIAN ROULETTE THEME ANIMATIONS
+   ============================================ */
+
+/* Danger pulse for LIAR button */
+@keyframes danger-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--danger-red-glow);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+    transform: scale(1.02);
+  }
+}
+
+.animate-danger-pulse {
+  animation: danger-pulse 1.5s ease-in-out infinite;
+}
+
+/* Pistol spin animation */
+@keyframes pistol-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.animate-pistol-spin {
+  animation: pistol-spin 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Tension shake */
+@keyframes tension-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-tension-shake {
+  animation: tension-shake 0.3s ease-in-out;
+}
+
+/* Bullet chamber glow */
+@keyframes bullet-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px var(--bullet-glow);
+  }
+  50% {
+    box-shadow: 0 0 12px var(--bullet-glow), 0 0 20px var(--bullet-glow);
+  }
+}
+
+.animate-bullet-glow {
+  animation: bullet-glow 2s ease-in-out infinite;
+}
+
+/* Blood drip effect (for eliminated players) */
+@keyframes blood-drip {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+.animate-blood-drip {
+  animation: blood-drip 1.5s ease-in forwards;
+}
+
+/* Smoke/gunpowder effect */
+@keyframes smoke-rise {
+  0% {
+    opacity: 0.5;
+    transform: translateY(0) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) scale(1.5);
+  }
+}
+
+.animate-smoke-rise {
+  animation: smoke-rise 1s ease-out forwards;
 }
