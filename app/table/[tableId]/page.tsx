@@ -387,6 +387,13 @@ export default function TablePage() {
                           </div>
                         </div>
                         <p className="text-white/80 text-[10px] sm:text-xs font-medium mt-1 truncate w-full text-center">{player.name}</p>
+                        <p className="text-white/40 text-[8px] font-mono truncate w-full text-center">
+                          {player.address.slice(0, 4)}...{player.address.slice(-4)}
+                        </p>
+                        {/* Player's cards (face-down) */}
+                        <div className="mt-2 flex justify-center scale-75 sm:scale-90">
+                          <CardBack count={5} isSmall />
+                        </div>
                       </div>
                     </div>
                   );
@@ -584,6 +591,11 @@ export default function TablePage() {
                           <span className="text-emerald-400 text-[9px] font-bold uppercase whitespace-nowrap">Ready</span>
                         </div>
                       </div>
+
+                      {/* Player's cards (face-down) */}
+                      <div className="mt-2 flex justify-center">
+                        <CardBack count={5} isSmall />
+                      </div>
                     </div>
                   );
                 } else {
@@ -676,28 +688,34 @@ export default function TablePage() {
                     return (
                       <div
                         key={player.address}
-                        className={`flex items-center gap-3 p-2 rounded-lg bg-white/5 ${
+                        className={`flex flex-col gap-2 p-2 rounded-lg bg-white/5 ${
                           isYou ? "ring-1 ring-amber-500/50" : ""
                         }`}
                       >
-                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${player.color} p-0.5`}>
-                          <div className="w-full h-full rounded-md bg-black/40 overflow-hidden">
-                            <Image
-                              src={player.image}
-                              alt={player.name}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-contain"
-                            />
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${player.color} p-0.5`}>
+                            <div className="w-full h-full rounded-md bg-black/40 overflow-hidden">
+                              <Image
+                                src={player.image}
+                                alt={player.name}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{player.name}</p>
+                            <p className="text-white/40 text-xs font-mono">
+                              {player.address.slice(0, 4)}...{player.address.slice(-4)}
+                            </p>
+                          </div>
+                          <div className="w-2 h-2 rounded-full bg-emerald-400" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-medium truncate">{player.name}</p>
-                          <p className="text-white/40 text-xs font-mono">
-                            {player.address.slice(0, 4)}...{player.address.slice(-4)}
-                          </p>
+                        {/* Player's cards (face-down) */}
+                        <div className="flex justify-center">
+                          <CardBack count={5} isSmall />
                         </div>
-                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
                       </div>
                     );
                   } else {
